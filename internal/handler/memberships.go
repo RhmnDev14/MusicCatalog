@@ -9,6 +9,7 @@ import (
 
 type MembershipsUc interface {
 	SignIn(req models.SignReq) error
+	LogIn(req models.LogInReq) (*models.AuthResponse, error)
 }
 
 type memberships struct {
@@ -25,10 +26,10 @@ func NewMembershipsHandler(usecase MembershipsUc, rg fiber.Router) *memberships 
 
 func (h *memberships) SetupRoutes() {
 	h.rg.Post(helper.SignIn, h.SignIn)
+	h.rg.Post(helper.LogIn, h.LogIn)
 }
 
 func (h *memberships) SignIn(c *fiber.Ctx) error {
-
 	var payload models.SignReq
 
 	if err := c.BodyParser(&payload); err != nil {
@@ -49,5 +50,29 @@ func (h *memberships) SignIn(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"status":  fiber.StatusCreated,
 		"message": "Success",
+	})
+}
+func (h *memberships) LogIn(c *fiber.Ctx) error {
+	var payload models.LogInReq
+
+	if err := c.BodyParser(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  fiber.StatusBadRequest,
+			"message": "Invalid request body",
+		})
+	}
+
+	authResp, err := h.usecase.LogIn(payload)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  fiber.StatusInternalServerError,
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  fiber.StatusOK,
+		"message": "Success",
+		"Data":    authResp,
 	})
 }

@@ -14,4 +14,8 @@ type (
 		Username string
 		Password string
 	}
+	LogInReq struct {
+		Email    string
+		Password string
+	}
 )

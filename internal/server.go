@@ -7,6 +7,7 @@ import (
 	"music_catalog/internal/helper"
 	"music_catalog/internal/models"
 	"music_catalog/internal/repository"
+	"music_catalog/internal/service"
 	"music_catalog/internal/usecase"
 	"time"
 
@@ -81,8 +82,11 @@ func NewServer() *Server {
 	//constructor repo
 	membershipRepo := repository.NewMembershipRepo(db)
 
+	//constructor service
+	jwtService := service.NewJwtService(cfg.TokenConfig)
+
 	//constructor usecase
-	membershipUc := usecase.NewMembershipUc(cfg, membershipRepo)
+	membershipUc := usecase.NewMembershipUc(cfg, membershipRepo, jwtService)
 
 	return &Server{
 		membershipsUc: membershipUc,
