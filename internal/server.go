@@ -3,14 +3,40 @@ package internal
 import (
 	"fmt"
 	"music_catalog/internal/config"
+	"music_catalog/internal/handler"
+	"music_catalog/internal/helper"
+	"music_catalog/internal/models"
+	"music_catalog/internal/repository"
+	"music_catalog/internal/usecase"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 type Server struct {
-	host string
+	membershipsUc handler.MembershipsUc
+	host          string
+	app           *fiber.App
+}
+
+func (s *Server) initRoute() {
+	rg := s.app.Group(helper.ApiGroup)
+
+	//constructor handler
+	membershipHandler := handler.NewMembershipsHandler(s.membershipsUc, rg)
+
+	//setup routes
+	membershipHandler.SetupRoutes()
+}
+
+func (s *Server) Run() {
+	s.initRoute()
+	if err := s.app.Listen(s.host); err != nil {
+		panic(fmt.Errorf("server not running on host %s, because of error %v", s.host, err.Error()))
+	}
 }
 
 func NewServer() *Server {
@@ -36,9 +62,31 @@ func NewServer() *Server {
 
 	db = db.Debug()
 
+	err = db.AutoMigrate(
+		&models.User{},
+	)
+	if err != nil {
+		panic(fmt.Sprintf("auto migrate error: %v", err))
+	}
+
 	host := fmt.Sprintf(":%s", cfg.ApiPort)
+	app := fiber.New()
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,DELETE",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		// AllowCredentials: true,
+	}))
+
+	//constructor repo
+	membershipRepo := repository.NewMembershipRepo(db)
+
+	//constructor usecase
+	membershipUc := usecase.NewMembershipUc(cfg, membershipRepo)
 
 	return &Server{
-		host: host,
+		membershipsUc: membershipUc,
+		host:          host,
+		app:           app,
 	}
 }
